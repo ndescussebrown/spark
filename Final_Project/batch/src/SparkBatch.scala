@@ -14,46 +14,66 @@ object SparkBatch {
         spark.close
     }
     
+    // We define the case classes we wll be needing for file conversion
     case class BrazilCovidCases(date:String,region:String,state:String,cases:String,deaths:String)
+    case class BrazilCovidCases_cities(date:String,state:String,cases:String,deaths:String)
 
-// Convert file brazil_covis19_cities.csv to new_brazil_covid19.csv with required format
-    def convert(spark: SparkSession, in: String, out: String) = {
-        val REQ_EX = "([0-9]{2}[-][0-9]{2}[-][0-9]{2})[,]([a-zA-Z]+[-]?[a-zA-Z]+)[,]([A-Z]{2})[,]([0-9]+[.]?[0-9]*)[,]([0-9]+)".r
-        
+// Convert files to dataset of strings format to prepare for Spakr sql
+    def convert(spark: SparkSession, in1: String,in2: String, out: String) = {
+        val REQ_EX_brazilcovid = "([0-9]{2}[-][0-9]{2}[-][0-9]{2})[,]([a-zA-Z]+[-]?[a-zA-Z]+)[,]([A-Z]{2})[,]([0-9]+[.]?[0-9]*)[,]([0-9]+)".r
+        val REQ_EX_brazilcovid_cities = "([0-9]{4}[-][0-9]{2}[-][0-9]{2})[,]([A-Z]{2})[,]([0-9]+[.]?[0-9]*)[,]([0-9]+[.]?[0-9]*)".r
+
         import spark.implicits._
 
-        def readSource = spark.read.format("csv").option("header","true").load(in)
-        def readSourceAsString = readSource.map(row => row.mkString(","))
 
 
-        val brazilcovid=BrazilCovidCases("date","region","state","cases","deaths")
+        // Convert brazil_covid19.csv file
+        def read_brazilcovid = spark.read.format("csv").option("header","true").load(in1)
+        def read_brazilcovidAsString = read_brazilcovid.map(row => row.mkString(","))
+
+        // Convert brazil_covid19_cities.csv file
+        def read_brazilcovid_cities = spark.read.format("csv").option("header","true").load(in2)
+        
+        // We drop the columns we won't need from the brazil_covid19 file:
+        val read_brazilcovid_cities_reduced=read_brazilcovid_cities.drop("name","code")
+        def read_brazilcovid_citiesAsString = read_brazilcovid_cities_reduced.map(row => row.mkString(","))
             
-        // We use a BrazilCovid constructor as per below
+        // We use a BrazilCovid constructor as per below for both covid file and covid_cities files
         BrazilCovidCases.apply _  
+        BrazilCovidCases_cities.apply _  
 
         def toBrazilCovidCases(params: List[String]) = BrazilCovidCases(params(0), params(1), params(2), params(3), params(4))
-
-        def cleanData(ds: Dataset[String]) = {
+        def toBrazilCovidCases_cities(params: List[String]) = BrazilCovidCases_cities(params(0), params(1), params(2), params(3))
+        
+        // We define our function to clean up the data 
+        def cleanData(ds: Dataset[String], my_req: scala.util.matching.Regex) = {
                            
                 // We apply do the pattern matching
-                val dsParsed = ds.flatMap(x => REQ_EX.unapplySeq(x))
+                val dsParsed = ds.flatMap(x => my_req.unapplySeq(x))
 
-                // We then convert our parsed string to a BrazilCovidCases instance 
-                val ds_out = dsParsed.map(toBrazilCovidCases _)  
-
-                ds_out   
+                dsParsed   
         }
 
-        val dsClean = cleanData(readSourceAsString)
-        //Then we create a view so we can use Spark SQL to query the data
-        dsClean.createOrReplaceTempView("BrazilCovid")
+        // We turn our datasets of string to case class instances
+        val dsClean_brazilcovid = cleanData(read_brazilcovidAsString, REQ_EX_brazilcovid).map(toBrazilCovidCases _)
+        val dsClean_brazilcovid_cities = cleanData(read_brazilcovid_citiesAsString, REQ_EX_brazilcovid_cities).map(toBrazilCovidCases_cities _)
         
-        // We then save the file to csv format
-        spark.sql("select count(*) as count from BrazilCovid").coalesce(1).write.mode("Overwrite").option("header",true).csv(out)
+        //Then we create a view so we can use Spark SQL to query the data
+        dsClean_brazilcovid.createOrReplaceTempView("BrazilCovid")
+
+        //We convert date string to date format for the brazil_covid19_cities file:
+        val dsWithDate_cities = dsClean_brazilcovid_cities.withColumn("date", to_date(dsClean_brazilcovid_cities("date"), "yyyy-MM-dd"))
+        
+        // We can now create the view for brazil_covid19_cities also:
+        dsWithDate_cities.createOrReplaceTempView("BrazilCovid_cities")
+        
+        // We then link the two files to obtain the region name and sum up cases and death for each day and each state, and save the file as csv
+        spark.sql("select date,regions.region,BrazilCovid_cities.state,sum(cases) as cases, sum(deaths) as deaths from BrazilCovid_cities left join (select distinct region,state from BrazilCovid) as regions on BrazilCovid_cities.state=regions.state group by date,BrazilCovid_cities.state,regions.region order by date,BrazilCovid_cities.state asc").coalesce(1).write.mode("Overwrite").option("header",true).csv(out)
+
     }
 
 	
-// Produce report-diff.json to compare new_brazil_covid19.csv with brazil_covid19.csv
+    // Produce report-diff.json to compare new_brazil_covid19.csv with brazil_covid19.csv
     def report(spark: SparkSession, in: String, out: String) = {
         import spark.implicits._
         val df = spark.read.parquet(in).withColumn("date", col("datetime").cast("date"))
