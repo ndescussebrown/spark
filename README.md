@@ -28,9 +28,12 @@ git clone https://github.com/ndescussebrown/spark.git
 To run the batch locally, we need to use the standalone module of the build.sc file and run the following:
 
 ```
-./mill -i batch.standalone.run batch data/brazil_covid19.csv new_brazil_covid19.csv
+./mill -i batch.standalone.run batch data/brazil_covid19.csv data/brazil_covid19_cities.csv new_brazil_covid19.csv
 ```
 
+There are two input files in our case:
+* brazil_covid19.csv - this file is used to extract the region name corresponding to each state
+* brazil_covid19_cities - this is the file we want to convert to the brazil_covid19.csv format
 
 ### How to package automatically the jar file 
 
