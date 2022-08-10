@@ -15,8 +15,8 @@ object SparkBatch {
     }
     
     // We define the case classes we wll be needing for file conversion
-    case class BrazilCovidCases(date:String,region:String,state:String,cases:String,deaths:String)
-    case class BrazilCovidCases_cities(date:String,state:String,cases:String,deaths:String)
+    //case class BrazilCovidCases(date:String,region:String,state:String,cases:String,deaths:String)
+    //case class BrazilCovidCases_cities(date:String,state:String,cases:String,deaths:String)
 
 // Convert files to dataset of strings format to prepare for Spakr sql
     def convert(spark: SparkSession, in1: String,in2: String, out: String) = {
@@ -29,99 +29,79 @@ object SparkBatch {
 
         // Convert brazil_covid19.csv file
         def read_brazilcovid = spark.read.format("csv").option("header","true").load(in1)
-        def read_brazilcovidAsString = read_brazilcovid.map(row => row.mkString(","))
+        //def read_brazilcovidAsString = read_brazilcovid.map(row => row.mkString(","))
 
         // Convert brazil_covid19_cities.csv file
         def read_brazilcovid_cities = spark.read.format("csv").option("header","true").load(in2)
         
         // We drop the columns we won't need from the brazil_covid19 file:
-        val read_brazilcovid_cities_reduced=read_brazilcovid_cities.drop("name","code")
-        def read_brazilcovid_citiesAsString = read_brazilcovid_cities_reduced.map(row => row.mkString(","))
+        //val read_brazilcovid_cities_reduced=read_brazilcovid_cities.drop("name","code")
+        //def read_brazilcovid_citiesAsString = read_brazilcovid_cities_reduced.map(row => row.mkString(","))
             
         // We use a BrazilCovid constructor as per below for both covid file and covid_cities files
-        BrazilCovidCases.apply _  
-        BrazilCovidCases_cities.apply _  
+        //BrazilCovidCases.apply _  
+        //BrazilCovidCases_cities.apply _  
 
-        def toBrazilCovidCases(params: List[String]) = BrazilCovidCases(params(0), params(1), params(2), params(3), params(4))
-        def toBrazilCovidCases_cities(params: List[String]) = BrazilCovidCases_cities(params(0), params(1), params(2), params(3))
+        //def toBrazilCovidCases(params: List[String]) = BrazilCovidCases(params(0), params(1), params(2), params(3), params(4))
+        //def toBrazilCovidCases_cities(params: List[String]) = BrazilCovidCases_cities(params(0), params(1), params(2), params(3))
         
         // We define our function to clean up the data 
-        def cleanData(ds: Dataset[String], my_req: scala.util.matching.Regex) = {
+        //def cleanData(ds: Dataset[String], my_req: scala.util.matching.Regex) = {
                            
                 // We apply do the pattern matching
-                val dsParsed = ds.flatMap(x => my_req.unapplySeq(x))
+                //val dsParsed = ds.flatMap(x => my_req.unapplySeq(x))
 
-                dsParsed   
-        }
+                //dsParsed   
+        //}
 
         // We turn our datasets of string to case class instances
-        val dsClean_brazilcovid = cleanData(read_brazilcovidAsString, REQ_EX_brazilcovid).map(toBrazilCovidCases _)
-        val dsClean_brazilcovid_cities = cleanData(read_brazilcovid_citiesAsString, REQ_EX_brazilcovid_cities).map(toBrazilCovidCases_cities _)
+        //val dsClean_brazilcovid = cleanData(read_brazilcovidAsString, REQ_EX_brazilcovid).map(toBrazilCovidCases _)
+        //val dsClean_brazilcovid_cities = cleanData(read_brazilcovid_citiesAsString, REQ_EX_brazilcovid_cities).map(toBrazilCovidCases_cities _)
         
         //Then we create a view so we can use Spark SQL to query the data
-        dsClean_brazilcovid.createOrReplaceTempView("BrazilCovid")
+        //dsClean_brazilcovid.createOrReplaceTempView("BrazilCovid")
 
         //We convert date string to date format for the brazil_covid19_cities file:
-        val dsWithDate_cities = dsClean_brazilcovid_cities.withColumn("date", to_date(dsClean_brazilcovid_cities("date"), "yyyy-MM-dd"))
+        //val dsWithDate_cities = dsClean_brazilcovid_cities.withColumn("date", to_date(dsClean_brazilcovid_cities("date"), "yyyy-MM-dd"))
         
         // We can now create the view for brazil_covid19_cities also:
-        dsWithDate_cities.createOrReplaceTempView("BrazilCovid_cities")
+        //dsWithDate_cities.createOrReplaceTempView("BrazilCovid_cities")
         
         // We then link the two files to obtain the region name and sum up cases and death for each day and each state, and save the file as csv
-        spark.sql("select date,regions.region,BrazilCovid_cities.state,sum(cases) as cases, sum(deaths) as deaths from BrazilCovid_cities left join (select distinct region,state from BrazilCovid) as regions on BrazilCovid_cities.state=regions.state group by date,BrazilCovid_cities.state,regions.region order by date,BrazilCovid_cities.state asc").coalesce(1).write.mode("Overwrite").option("header",true).csv(out)
+        //spark.sql("select date,regions.region,BrazilCovid_cities.state,sum(cases) as cases, sum(deaths) as deaths from BrazilCovid_cities left join (select distinct region,state from BrazilCovid) as regions on BrazilCovid_cities.state=regions.state group by date,BrazilCovid_cities.state,regions.region order by date,BrazilCovid_cities.state asc").coalesce(1).write.mode("Overwrite").option("header",true).csv(out)
+
+        // MUCH QUICKER THAN THE ABOVE: 
+        read_brazilcovid_cities.createOrReplaceTempView("BrazilCovid_cities")
+        read_brazilcovid.createOrReplaceTempView("BrazilCovid")
+        spark.sql("select to_date(date,'yyyy-MM-dd') as date,regions.region,BrazilCovid_cities.state,sum(cases) as cases, sum(deaths) as deaths from BrazilCovid_cities left join (select distinct region,state from BrazilCovid) as regions on BrazilCovid_cities.state=regions.state group by date,BrazilCovid_cities.state,regions.region order by to_date(date,'yyyy-MM-dd'),BrazilCovid_cities.state asc").coalesce(1).write.mode("Overwrite").option("header",true).csv(out)
+
 
     }
 
 	
     // Produce report-diff.json to compare new_brazil_covid19.csv with brazil_covid19.csv
-    def report(spark: SparkSession, in: String, out: String) = {
+    def report(spark: SparkSession, in1: String,in2: String, out: String) = {
         import spark.implicits._
-        val df = spark.read.parquet(in).withColumn("date", col("datetime").cast("date"))
-        df.createOrReplaceTempView("logs")
-        val dates = spark.sql("""
-        with dates as (
-            select date, count(*) as cnt 
-            from logs 
-            group by date 
-            having count(*) > 20000
-            order by cnt desc)
+        val read_new_brazilcovid = spark.read.format("csv").option("header","true").load(in1)
+        val read_brazilcovid = spark.read.format("csv").option("header","true").load(in2)
+        read_new_brazilcovid.createOrReplaceTempView("new_brazilcovid")
+        read_brazilcovid.createOrReplaceTempView("brazilcovid")
 
-        select date from dates             
-        """).createTempView("dates")
+        //val output = spark.sql("""
+        //select to_date(new.date, "yyyy-MM-dd") as new_date, new.state as new_state, new.cases-old.cases as diff_cases, new.deaths - old.deaths as diff_deaths from new
+        //    LEFT JOIN old
+        //    on to_date(old.date, "dd-MM-yy")=to_date(new.date, "yyyy-MM-dd") and old.state=new.state
+        //    order by new_date, new_state asc"""
+        //)
 
-       /* 
-       val countByIp = spark.sql("""
-        with ips as (
-            select date, ip, count(*) as cnt
-            from logs
-            group by date, ip
-        )
-
-        select date, collect_list(struct(ip, cnt as count)) as ip_list from ips group by date
-        """).createTempView("ips")
-        */
-
-        def createCountByFieldView(field: String) = spark.sql(s"""
-        with ${field}s as (
-            select date, $field, count(*) as cnt
-            from logs
-            group by date, $field
-        )
-
-        select date, collect_list(struct($field, cnt as count)) as ${field}_list from ${field}s group by date
-        """).createTempView(s"${field}s")
-
-        createCountByFieldView("ip")
-        createCountByFieldView("uri")
-
-        val report = spark.sql("""
-        select dates.date, ips.ip_list, uris.uri_list
-        from dates 
-        inner join ips on ips.date = dates.date 
-        inner join uris on uris.date = dates.date
-        """)
+        //val mynew =  spark.sql("""with mynew as (select to_date(brazilcovid.date, 'dd-MM-yy') as old_date, brazilcovid.state as old_state from new_brazilcovid FULL OUTER JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE to_date(new_brazilcovid.date, 'yyyy-MM-dd') IS NULL ) select count(*) as count_oldnotnew from mynew""")
+        //val myold = spark.sql("""with myold as (select to_date(new_brazilcovid.date, 'yyyy-MM-dd') as new_date, new_brazilcovid.state as new_state from new_brazilcovid FULL OUTER JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE to_date(brazilcovid.date, 'dd-MM-yy') IS NULL) select count(*) as count_newnotold from myold""")
+        //val same = spark.sql("""with same as (select to_date(new_brazilcovid.date, 'yyyy-MM-dd') as new_date, new_brazilcovid.state as new_state, new_brazilcovid.cases-brazilcovid.cases as diff_cases, new_brazilcovid.deaths - brazilcovid.deaths as diff_deaths, to_date(brazilcovid.date, 'dd-MM-yy') as old_date, brazilcovid.state as old_state from new_brazilcovid JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE new_brazilcovid.cases-brazilcovid.cases=0 AND new_brazilcovid.deaths-brazilcovid.deaths=0 ORDER BY new_date, new_state asc) select count(*) as count_same from same""")
+        //val notsame = spark.sql("""with notsame as (select to_date(new_brazilcovid.date, 'yyyy-MM-dd') as new_date, new_brazilcovid.state as new_state, new_brazilcovid.cases-brazilcovid.cases as diff_cases, new_brazilcovid.deaths - brazilcovid.deaths as diff_deaths, to_date(brazilcovid.date, 'dd-MM-yy') as old_date, brazilcovid.state as old_state from new_brazilcovid JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE new_brazilcovid.cases-brazilcovid.cases!=0 AND new_brazilcovid.deaths-brazilcovid.deaths!=0 ORDER BY new_date, new_state asc) select count(*) as count_notsame from notsame""")
         
-        report.coalesce(1).write.mode("Overwrite").json(out)
+        val output= spark.sql("""SELECT COUNT(to_date(new_brazilcovid.date, 'yyyy-MM-dd')) AS destination_rows,COUNT(to_date(brazilcovid.date, 'dd-MM-yy')) AS source_rows, SUM(CASE WHEN to_date(new_brazilcovid.date, 'yyyy-MM-dd') IS NULL THEN 1 ELSE 0 END) AS count_oldnotnew, SUM(CASE WHEN to_date(brazilcovid.date, 'dd-MM-yy') IS NULL THEN 1 ELSE 0 END) AS count_newnotold, SUM(CASE WHEN new_brazilcovid.cases-brazilcovid.cases=0 AND new_brazilcovid.deaths-brazilcovid.deaths=0 THEN 1 ELSE 0 END) AS count_same, SUM(CASE WHEN new_brazilcovid.cases-brazilcovid.cases!=0 OR new_brazilcovid.deaths-brazilcovid.deaths!=0 THEN 1 ELSE 0 END) AS count_notsame from new_brazilcovid FULL OUTER JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state""")
+
+        output.coalesce(1).write.mode("Overwrite").json(out)
         
     }
 }
