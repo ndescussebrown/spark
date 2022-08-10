@@ -87,18 +87,6 @@ object SparkBatch {
         read_new_brazilcovid.createOrReplaceTempView("new_brazilcovid")
         read_brazilcovid.createOrReplaceTempView("brazilcovid")
 
-        //val output = spark.sql("""
-        //select to_date(new.date, "yyyy-MM-dd") as new_date, new.state as new_state, new.cases-old.cases as diff_cases, new.deaths - old.deaths as diff_deaths from new
-        //    LEFT JOIN old
-        //    on to_date(old.date, "dd-MM-yy")=to_date(new.date, "yyyy-MM-dd") and old.state=new.state
-        //    order by new_date, new_state asc"""
-        //)
-
-        //val mynew =  spark.sql("""with mynew as (select to_date(brazilcovid.date, 'dd-MM-yy') as old_date, brazilcovid.state as old_state from new_brazilcovid FULL OUTER JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE to_date(new_brazilcovid.date, 'yyyy-MM-dd') IS NULL ) select count(*) as count_oldnotnew from mynew""")
-        //val myold = spark.sql("""with myold as (select to_date(new_brazilcovid.date, 'yyyy-MM-dd') as new_date, new_brazilcovid.state as new_state from new_brazilcovid FULL OUTER JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE to_date(brazilcovid.date, 'dd-MM-yy') IS NULL) select count(*) as count_newnotold from myold""")
-        //val same = spark.sql("""with same as (select to_date(new_brazilcovid.date, 'yyyy-MM-dd') as new_date, new_brazilcovid.state as new_state, new_brazilcovid.cases-brazilcovid.cases as diff_cases, new_brazilcovid.deaths - brazilcovid.deaths as diff_deaths, to_date(brazilcovid.date, 'dd-MM-yy') as old_date, brazilcovid.state as old_state from new_brazilcovid JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE new_brazilcovid.cases-brazilcovid.cases=0 AND new_brazilcovid.deaths-brazilcovid.deaths=0 ORDER BY new_date, new_state asc) select count(*) as count_same from same""")
-        //val notsame = spark.sql("""with notsame as (select to_date(new_brazilcovid.date, 'yyyy-MM-dd') as new_date, new_brazilcovid.state as new_state, new_brazilcovid.cases-brazilcovid.cases as diff_cases, new_brazilcovid.deaths - brazilcovid.deaths as diff_deaths, to_date(brazilcovid.date, 'dd-MM-yy') as old_date, brazilcovid.state as old_state from new_brazilcovid JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state WHERE new_brazilcovid.cases-brazilcovid.cases!=0 AND new_brazilcovid.deaths-brazilcovid.deaths!=0 ORDER BY new_date, new_state asc) select count(*) as count_notsame from notsame""")
-        
         val output= spark.sql("""SELECT COUNT(to_date(new_brazilcovid.date, 'yyyy-MM-dd')) AS destination_rows,COUNT(to_date(brazilcovid.date, 'dd-MM-yy')) AS source_rows, SUM(CASE WHEN to_date(new_brazilcovid.date, 'yyyy-MM-dd') IS NULL THEN 1 ELSE 0 END) AS count_oldnotnew, SUM(CASE WHEN to_date(brazilcovid.date, 'dd-MM-yy') IS NULL THEN 1 ELSE 0 END) AS count_newnotold, SUM(CASE WHEN new_brazilcovid.cases-brazilcovid.cases=0 AND new_brazilcovid.deaths-brazilcovid.deaths=0 THEN 1 ELSE 0 END) AS count_same, SUM(CASE WHEN new_brazilcovid.cases-brazilcovid.cases!=0 OR new_brazilcovid.deaths-brazilcovid.deaths!=0 THEN 1 ELSE 0 END) AS count_notsame from new_brazilcovid FULL OUTER JOIN brazilcovid on to_date(brazilcovid.date, 'dd-MM-yy')=to_date(new_brazilcovid.date, 'yyyy-MM-dd') and brazilcovid.state=new_brazilcovid.state""")
 
         output.coalesce(1).write.mode("Overwrite").json(out)
