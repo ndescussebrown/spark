@@ -35,7 +35,31 @@ I used a simple sql query to extract the above, which I saved into a dataframe r
 
 The new_brazil_covid19.csv obtained using the processing from the barzil_covid19_cities files as explained in Section 6 was found to have some discrepancies compared to the original brazil_covid19.csv. 
 
+The results from the report-diff.json file are reported in the table below:
+
+| destination_rows | source_rows | count_oldnotnew | count_newnotold | count_same | count_notsame |
+|------------------|-------------|-----------------|-----------------|------------|---------------|
+|      11421       |     12258   |       837       |         0       |     7384   |      4037     |
+
+
+Interpretation:
+
+* count_oldnotnew = 837 means that for 837 (date,state) keys, there are no records of covid cases and deaths in the input brazil_covid19_cities.csv file for these states at these dates.
+* count_newnotold = 0 means that there are no records in the new_brazil_covid19.csv file that are not also present in the original brazil_covid19.csv file.
+* count_same = 7384 means there are 7384 identical records between the new_brazil_covid19.csv file and the original brazil_covid19.csv file.
+* count_notsame = 4037 means there are 4037 records shared by both files but with different values, either in number of reported cases, reported deaths, or both.
+* The difference between the destination_rows and source_rows, taken together with the count_oldnotnew and count_newnotold values means there are 837 records present in the original brazil_covid19.csv file that are not present in the new_brazil_covid19.csv file.
+
+Explanation:
+* Difference between the destination_rows and source_rows: This is due to the fact that the input file brazil_covid19_cities covers reporting period from 27-03-2020 to 23-05-2021, whereas the original brazil_covid19.csv file covers reporting period 25-02-2020 to 21-05-2021. So 31 days of reporting are missing (as 2020 was a leap year, hence February had 29 days) from the brazil_covid19_cities file, for each of the 27 states, i.e. exactly 837 records.
+* count_newnotold = 0 is also explained by the above (reporting period for brazil_covid19_cities.csv file started 31 days after the reporting period for brazil_covid19.csv file but ended on the same day).
+* With regard to count_notsame = 4037 as the difference between number of cases and deaths between both files is either negative or positive, there could be different explanation. When the number of cases or deaths is greater in the brazilcovid19.csv file than in the new_brazilcovid19.csv file (about than 38% of the number of records for the overlapping period), it could be due to the fact that the cases or deaths were not registered with the cities but in the countryside for example. When the number of cases or deaths is greater in the new_brazilcovid19.csv file than in the brazilcovid19.csv file (less than 1% of the number of records for the overlapping period and representing an error on actual number of cases or deaths of approximately 1% also), it could simply be due to reporting errors, or delays in reporting to the next day etc.
+
 ### 4. Architecture Diagram
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 ### 5. How to clone the github project
 
@@ -88,6 +112,21 @@ $SPARK_HOME/bin/spark-submit --class SparkCli $PWD/out/batch/assembly.dest/out.j
 
 ### 9. How to run the batch using the spark-submit command with AWS 
 
+For the batch:
+```
+spark-submit --deploy-mode cluster --class SparkCli s3://ndbspark/jars/batch-v1.jar batch s3://ndbspark/data/input/brazil_covid19.csv s3://ndbspark/data/input/brazil_covid19_cities.csv s3://ndbspark/data/output/new_brazil_covid19_cities.csv 
+```
+
+For the report:
+```
+spark-submit --deploy-mode cluster --class SparkCli s3://ndbspark/jars/batch-v1.jar report s3://ndbspark/data/output/new_brazil_covid19.csv s3://ndbspark/data/input/brazil_covid19.csv s3://ndbspark/data/output/report-diff.json 
+```
+
+ADD SCREESHOTS!!!!!
+
+
+
+
 ### 10. How to generate the diff report locally 
 
 To run the report locally, we need to use the standalone module of the build.sc file and run the following:
@@ -108,30 +147,31 @@ The output file, report-diff.json, contains 6 fields, which are as follows:
 * "count_same": this is the number of rows that are identical in the original brazil_covid19.csv file and in the new_brazil_covid19.csv file
 * "count_notsame": this is the number of rows that differ in the original brazil_covid19.csv file and in the new_brazil_covid19.csv file
 
-The results from the report-diff.json file are also reported in the table below:
-
-| destination_rows | source_rows | count_oldnotnew | count_newnotold | count_same | count_notsame |
-|------------------|-------------|-----------------|-----------------|------------|---------------|
-|      11421       |     12258   |       837       |         0       |     7384   |      4037     |
-
-
-Interpretation:
-
-* count_oldnotnew = 837 means that for 837 (date,state) keys, there are no records of covid cases and deaths in the input brazil_covid19_cities.csv file for these states at these dates.
-* count_newnotold = 0 means that there are no records in the new_brazil_covid19.csv file that are not also present in the original brazil_covid19.csv file.
-* count_same = 7384 means there are 7384 identical records between the new_brazil_covid19.csv file and the original brazil_covid19.csv file.
-* count_notsame = 4037 means there are 4037 records shared by both files but with different values, either in number of reported cases, reported deaths, or both.
-* The difference between the destination_rows and source_rows, taken together with the count_oldnotnew and count_newnotold values means there are 837 records present in the original brazil_covid19.csv file that are not present in the new_brazil_covid19.csv file.
-
-Explanation:
-* Difference between the destination_rows and source_rows: This is due to the fact that the input file brazil_covid19_cities covers reporting period from 27-03-2020 to 23-05-2021, whereas the original brazil_covid19.csv file covers reporting period 25-02-2020 to 21-05-2021. So 31 days of reporting are missing (as 2020 was a leap year, hence February had 29 days) from the brazil_covid19_cities file, for each of the 27 states, i.e. exactly 837 records.
-* count_newnotold = 0 is also explained by the above (reporting period for brazil_covid19_cities.csv file started 31 days after the reporting period for brazil_covid19.csv file but ended on the same day).
-* With regard to count_notsame = 4037 as the difference between number of cases and deaths between both files is either negative or positive, there could be different explanation. When the number of cases or deaths is greater in the brazilcovid19.csv file than in the new_brazilcovid19.csv file (about than 38% of the number of records for the overlapping period), it could be due to the fact that the cases or deaths were not registered with the cities but in the countryside for example. When the number of cases or deaths is greater in the new_brazilcovid19.csv file than in the brazilcovid19.csv file (less than 1% of the number of records for the overlapping period and representing an error on actual number of cases or deaths of approximately 1% also), it could simply be due to reporting errors, or delays in reporting to the next day etc.
-
-
 
 ### 11. How to copy the data to AWS s3 so that the AWS spark-submit command executes without error (aws s3 …)
 
+Because I had been using Spark version 3.1.3 to run the jar manually (due to a number of installation issues on Windows) and I couldn't find this version in AWS, I had to repackage the jat file using Spark version 3.2.0 (updating the version in build.sc file and running the following command again:
+
+```
+./mill -i batch.assembly
+```
+
+
+
+
+
+
+
+
 ### 12. How to fetch the new_brazil_covid19.csv file (aws s3 …)
+
+
+
+
+
+
+
+
+
 
 ### 13. How to fetch the report_diff.json file  (aws s3 …)
