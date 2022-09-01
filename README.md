@@ -117,6 +117,9 @@ For the batch:
 spark-submit --deploy-mode cluster --class SparkCli s3://ndbspark/jars/batch-v1.jar batch s3://ndbspark/data/input/brazil_covid19.csv s3://ndbspark/data/input/brazil_covid19_cities.csv s3://ndbspark/data/output/new_brazil_covid19_cities.csv 
 ```
 
+![batch_completed](/Final_Project/images/AWS_batch_running_completed.jpg)
+
+
 For the report:
 ```
 spark-submit --deploy-mode cluster --class SparkCli s3://ndbspark/jars/batch-v1.jar report s3://ndbspark/data/output/new_brazil_covid19.csv s3://ndbspark/data/input/brazil_covid19.csv s3://ndbspark/data/output/report-diff.json 
@@ -150,28 +153,33 @@ The output file, report-diff.json, contains 6 fields, which are as follows:
 
 ### 11. How to copy the data to AWS s3 so that the AWS spark-submit command executes without error (aws s3 …)
 
-Because I had been using Spark version 3.1.3 to run the jar manually (due to a number of installation issues on Windows) and I couldn't find this version in AWS, I had to repackage the jat file using Spark version 3.2.0 (updating the version in build.sc file and running the following command again:
+The data was copied to AWS s3 using the following aws cli command from the parent folder:
+
+```
+aws s3 cp ./data/brazil_covid19.csv s3://ndbspark/data/input/
+aws s3 cp ./data/brazil_covid19_cities.csv s3://ndbspark/data/input/
+```
+
+Note: Because I had been using Spark version 3.1.3 to run the jar manually (due to a number of installation issues on Windows) and I couldn't find this version in AWS, I had to repackage the jat file using Spark version 3.2.0 (updating the version in build.sc file and running the following command again:
 
 ```
 ./mill -i batch.assembly
 ```
 
-
-
-
-
-
-
-
 ### 12. How to fetch the new_brazil_covid19.csv file (aws s3 …)
 
 
+The output file new_brazil_covid19.csv can then be downloaded from s3 bucket to a local subfolder using the following aws cli command line:
 
-
-
-
-
-
+```
+aws s3 sync s3://ndbspark/data/output/new_brazil_covid19.csv/ ./data/output/new_brazil_covid19.csv/
+```
 
 
 ### 13. How to fetch the report_diff.json file  (aws s3 …)
+
+
+The output file report-diff.json can then be downloaded from s3 bucket to a local subfolder using the following aws cli command line:
+```
+aws s3 sync s3://ndbspark/data/output/report-diff.json/ ./data/output//report-diff.json/
+```
