@@ -112,20 +112,32 @@ $SPARK_HOME/bin/spark-submit --class SparkCli $PWD/out/batch/assembly.dest/out.j
 
 ### 9. How to run the batch using the spark-submit command with AWS 
 
+The spark job was run using a EMR cluster within AWS. The settings for the EMR cluster as shown in the below screenshot:
+
+![EMR_cluster_settings](/Final_Project/images/EMR_Cluster_Settings.jpg)
+
 For the batch:
 ```
 spark-submit --deploy-mode cluster --class SparkCli s3://ndbspark/jars/batch-v1.jar batch s3://ndbspark/data/input/brazil_covid19.csv s3://ndbspark/data/input/brazil_covid19_cities.csv s3://ndbspark/data/output/new_brazil_covid19_cities.csv 
 ```
+![batch_steps](/Final_Project/images/EMR_Running_batch.jpg)
+
+![running_batch](/Final_Project/images/EMR_Running_cluster.jpg)
 
 ![batch_completed](/Final_Project/images/AWS_batch_running_completed.jpg)
 
 
 For the report:
+
 ```
 spark-submit --deploy-mode cluster --class SparkCli s3://ndbspark/jars/batch-v1.jar report s3://ndbspark/data/output/new_brazil_covid19.csv s3://ndbspark/data/input/brazil_covid19.csv s3://ndbspark/data/output/report-diff.json 
 ```
 
-ADD SCREESHOTS!!!!!
+![report_steps](/Final_Project/images/EMR_Running_report.jpg)
+
+![report_running](/Final_Project/images/EMR_Step_Setting_report.jpg)
+
+![report_completed](/Final_Project/images/AWS_report_running_completed.jpg)
 
 
 
@@ -175,6 +187,7 @@ The output file new_brazil_covid19.csv can then be downloaded from s3 bucket to 
 aws s3 sync s3://ndbspark/data/output/new_brazil_covid19.csv/ ./data/output/new_brazil_covid19.csv/
 ```
 
+![batch_download](/Final_Project/images/AWS_newcsvfile_download.jpg)
 
 ### 13. How to fetch the report_diff.json file  (aws s3 …)
 
@@ -183,3 +196,5 @@ The output file report-diff.json can then be downloaded from s3 bucket to a loca
 ```
 aws s3 sync s3://ndbspark/data/output/report-diff.json/ ./data/output//report-diff.json/
 ```
+
+![report_download](/Final_Project/images/AWS_report-diff_download.jpg)
