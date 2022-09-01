@@ -13,7 +13,6 @@ The strategy used to build the project was incremental.
 First, the spark-hands-on repository wiki from teacher Jean-Luc Canela (https://github.com/jlcanela/spark-hands-on/wiki) was used to run standalone commands in spark shell to try and address the requirements of the Final project. This served as a test that commands fulfilled their purpose and could then subsequently be used ina full-fledged spark programme.
 
 The code was refined by using both the fulltext-search-sample (https://github.com/jlcanela/fulltext-search-sample) and basicreport (https://github.com/jlcanela/basicreport/) go-bys repositories from Jean-Luc Canela as I could see that both would be useful in building the project:
-* 
 * The basicreport files were used to better understand how to clean up the fulltext-search file of unnecessary methods.
 * The fulltext-search-sample was used as as go-by to address the complexity of the challenge but reduce the number of files produced (only two files) whilst helping me understand which files were not required
 
@@ -57,9 +56,13 @@ Explanation:
 
 ### 4. Architecture Diagram
 
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+The architecture for this project is shown in the diagram below and include:
+* the client: this is the local machine where the original input files is stored. It is also on this machine that the jar file is packaged.
+* the s3 bucket: this is where the local input files are uploaded for use with AWS. This is also where the output file will be uploaded once processed with the EMR Spark cluster.
+* the EMR cluster: this EMR cluster will enable easy running of Spark and transfer data in and out of the s3 bucket.
+* the Spark cluster: the cluster where the tasks (in this case creation of new csv file and json diff report) are executed.
+
+![Architectur](/Final_Project/images/architecture.jpg)
 
 ### 5. How to clone the github project
 
